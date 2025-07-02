@@ -1,0 +1,1 @@
+# Predictive-Analysis-and-Trend-Forecasting-using-GenAI
