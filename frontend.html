@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Insights Chatbot</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #89f7fe, #66a6ff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Containers for Login and Chat */
+        .login-container, .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .chat-container { display: none; }
+
+        /* Header */
+        .header {
+            background-color: #66a6ff;
+            padding: 20px;
+            color: #fff;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 8px 8px 0 0;
+            position: relative;
+        }
+
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .logout-button:hover {
+            background-color: #ff4d4d;
+        }
+
+        /* Input Styles */
+        .input-container input[type="text"],
+        .input-container input[type="password"],
+        .input-container button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .input-container button {
+            background-color: #66a6ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .input-container button:hover {
+            background-color: #557cb4;
+        }
+
+        /* Toggle Link */
+        .toggle-link {
+            color: #66a6ff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        /* Chat Bubbles */
+        .chat-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin: 5px 0;
+            line-height: 1.4;
+            font-size: 16px;
+            text-align: justify;
+        }
+
+        .chat-bubble.user {
+            background-color: #66a6ff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+
+        .chat-bubble.bot {
+            background-color: #f4f4f4;
+            color: black;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Container -->
+<div class="login-container show" id="login-container">
+    <div class="header">Financial Analyst Chatbot</div>
+    <div class="input-container">
+        <input type="text" id="email" placeholder="Enter your email">
+        <input type="password" id="password" placeholder="Enter your password">
+        <button onclick="authenticate()">Login</button>
+        <p>Don't have an account? <span class="toggle-link" onclick="toggleAuthMode()">Sign up</span></p>
+    </div>
+</div>
+
+<!-- Chat Container -->
+<div class="chat-container" id="chat-container">
+    <div class="header">Financial Insights Chatbot</div>
+    <button class="logout-button" onclick="logout()">Logout</button>
+    <div class="input-container">
+        <input type="text" id="ticker" placeholder="Enter stock ticker (e.g., AAPL)">
+        <input type="text" id="query" placeholder="Ask your financial question">
+        <button onclick="askBot()">Ask Bot</button>
+        <button onclick="viewRevenueDashboard()">View Revenue Dashboard</button>
+        <button onclick="forecastNextQuarter()">Forecast Next Quarter with Trend</button> <!-- Forecast Button -->
+    </div>
+    <div class="chat-area" id="chat-area">
+        <!-- Chat bubbles will be dynamically added here -->
+    </div>
+</div>
+
+<script>
+    document.getElementById("login-container").classList.add("show");
+
+    function toggleAuthMode() {
+        const button = document.querySelector('.input-container button');
+        const toggleText = document.querySelector('.toggle-link');
+
+        if (button.innerText === 'Login') {
+            button.innerText = 'Sign up';
+            toggleText.innerText = 'Login';
+        } else {
+            button.innerText = 'Login';
+            toggleText.innerText = 'Sign up';
+        }
+    }
+
+    async function authenticate() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const isSignup = document.querySelector('.input-container button').innerText === 'Sign up';
+
+        const response = await fetch('http://localhost:5000/authenticate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password, isSignup })
+        });
+
+        const data = await response.json();
+        alert(data.message);
+
+        if (data.success) {
+            document.getElementById("login-container").classList.remove("show");
+            setTimeout(() => {
+                document.getElementById("login-container").style.display = "none";
+                document.getElementById("chat-container").style.display = "block";
+                document.getElementById("chat-container").classList.add("show");
+            }, 500);
+        }
+    }
+
+    async function askBot() {
+        const query = document.getElementById("query").value;
+        const ticker = document.getElementById("ticker").value;
+
+        if (!query || !ticker) {
+            alert("Please enter both a query and a stock ticker.");
+            return;
+        }
+
+        addChatBubble(query, 'user');
+
+        const response = await fetch('http://localhost:5000/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: query, ticker: ticker })
+        });
+
+        const data = await response.json();
+        addChatBubble(data.response, 'bot');
+        document.getElementById("query").value = '';
+    }
+
+    // Function to fetch and display the revenue dashboard
+    async function viewRevenueDashboard() {
+        const ticker = document.getElementById("ticker").value.toUpperCase();
+
+        if (!ticker) {
+            alert("Please enter a stock ticker to view the dashboard.");
+            return;
+        }
+
+        const response = await fetch(`http://localhost:5000/dashboard/revenue?ticker=${ticker}`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert("Error fetching dashboard data: " + data.error);
+            return;
+        }
+
+        addChatBubble("Here is the revenue dashboard:", 'bot');
+        const chartId = "revenue-chart-" + Date.now();
+        const bubble = document.createElement("div");
+        bubble.classList.add("chat-bubble", 'bot');
+        bubble.style.maxWidth = "100%";
+        bubble.style.textAlign = "center";
+
+        const chartDiv = document.createElement("div");
+        chartDiv.id = chartId;
+        chartDiv.style.width = "100%";
+        chartDiv.style.height = "400px";
+        bubble.appendChild(chartDiv);
+        document.getElementById("chat-area").appendChild(bubble);
+
+        const plotData = JSON.parse(data.plot);
+        Plotly.newPlot(chartId, plotData.data, plotData.layout);
+    }
+
+
+
+    async function forecastNextQuarter() {
+        const ticker = document.getElementById("ticker").value;
+
+        if (!ticker) {
+            alert("Please enter a stock ticker.");
+            return;
+        }
+
+        const response = await fetch('http://localhost:5000/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: "forecast next quarter with trend", ticker: ticker })
+        });
+
+        const data = await response.json();
+
+        if (data.plot) {
+            addChatBubble("Here is the forecasted revenue trend:", 'bot');
+            const chartId = "forecast-chart-" + Date.now();
+            const bubble = document.createElement("div");
+            bubble.classList.add("chat-bubble", 'bot');
+            bubble.style.maxWidth = "100%";
+            bubble.style.textAlign = "center";
+
+            const chartDiv = document.createElement("div");
+            chartDiv.id = chartId;
+            chartDiv.style.width = "100%";
+            chartDiv.style.height = "400px";
+            bubble.appendChild(chartDiv);
+            document.getElementById("chat-area").appendChild(bubble);
+
+            const plotData = JSON.parse(data.plot);
+            Plotly.newPlot(chartId, plotData.data, plotData.layout);
+        }
+
+        addChatBubble(data.response, 'bot');
+    }
+
+    function addChatBubble(text, sender) {
+        const chatArea = document.getElementById("chat-area");
+        const bubble = document.createElement("div");
+        bubble.classList.add("chat-bubble", sender);
+        bubble.innerText = text;
+        chatArea.appendChild(bubble);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function logout() {
+        document.getElementById("chat-container").classList.remove("show");
+        setTimeout(() => {
+            document.getElementById("chat-container").style.display = "none";
+            document.getElementById("login-container").style.display = "block";
+            document.getElementById("login-container").classList.add("show");
+        }, 500);
+    }
+</script>
+
+</body>
+</html>
